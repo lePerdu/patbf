@@ -1,1 +1,14 @@
 # Changelog for pinky
+
+Versions follow the Haskell [PVP](https://pvp.haskell.org) specification.
+
+## [0.1.0.0] - 2019-09-18
+### Initial version features
+- Brainfuck parsing with extra `#` command for debugging
+- Add and move collapsing
+- "Linear loop" optimizations for loops with a balanced number of moves and only
+  containing moves and increments/decrements.
+- Basic command-line interface and REPL
+
+[Unreleased]: https://github.com/lePerdu/pinky
+

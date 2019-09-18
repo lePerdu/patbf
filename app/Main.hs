@@ -143,7 +143,7 @@ exit e = putStrLn (displayException e) >> exitFailure
 repl :: (MonadReader RunOptions m, MonadIO m, MonadException m) => m ()
 repl = runInputT defaultSettings loop  where
     loop = do
-        input <- getInputLine "> "
+        input <- getInputLine "% "
         case input of
             Nothing   -> return ()
             Just code -> do

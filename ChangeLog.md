@@ -2,6 +2,11 @@
 
 Versions follow the Haskell [PVP](https://pvp.haskell.org) specification.
 
+## [0.1.0.1] - 2019-09-18
+### Changes
+- Change default prompt from `>` to `%` to avoid confusion with the Brainfuck
+  command `>`
+
 ## [0.1.0.0] - 2019-09-18
 ### Initial version features
 - Brainfuck parsing with extra `#` command for debugging

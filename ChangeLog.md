@@ -2,6 +2,10 @@
 
 Versions follow the Haskell [PVP](https://pvp.haskell.org) specification.
 
+## [0.3.0.1] - 2019-09-19
+### Changes
+- Added some meta-commands (starting with `:`) to the REPL.
+
 ## [0.3.0.0] - 2019-09-19
 ### Changes
 - Re-structured the module name hierarchy:
@@ -27,6 +31,7 @@ Versions follow the Haskell [PVP](https://pvp.haskell.org) specification.
 - Basic command-line interface and REPL
 
 [Unreleased]: https://github.com/lePerdu/pinky
+[0.3.0.1]: https://github.com/lePerdu/releases/tag/0.3.0.1
 [0.3.0.0]: https://github.com/lePerdu/releases/tag/0.3.0.0
 [0.2.0.0]: https://github.com/lePerdu/releases/tag/0.2.0.0
 [0.1.0.1]: https://github.com/lePerdu/releases/tag/0.1.0.1

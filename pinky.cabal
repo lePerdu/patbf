@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8dc6e2da2ae39255e58e5dda9274e71ede7b6a65a7a02c72068240ec75e30d61
+-- hash: 4d5933e2b4adfba47f5819ca0de8ab1d35d99a5497bb04cf96ebdc86f630870a
 
 name:           pinky
 version:        0.3.0.0
@@ -53,6 +53,8 @@ library
 executable pinky
   main-is: Main.hs
   other-modules:
+      Commands
+      Types
       Paths_pinky
   hs-source-dirs:
       app

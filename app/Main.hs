@@ -1,10 +1,10 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
 import           Data.Word
+import           Data.Maybe
+import           Data.Either.Combinators
 import           System.Environment
 import           System.IO
 import           System.Exit
@@ -14,34 +14,22 @@ import           Control.Exception
 import           Control.Monad.Reader
 import           Control.Monad.State.Strict
 
-import           Control.Monad                  ( when )
+import           Control.Monad
 
 import           Options.Applicative
 
 import           System.Console.Haskeline
 import           Lens.Micro.Platform
+import           Text.Megaparsec                ( runParser )
 
 import           Pinky
-
-data CellSize = CellWord8 | CellWordDefault deriving (Eq)
-
-data RunOptions = RunOptions
-    { _unbufferedInput :: Bool
-    , _cellSize :: CellSize
-    , _interpOptions :: BFOptions
-    }
-
-makeLenses ''RunOptions
-
-data Options = Options { _fileName :: Maybe String, _runOptions :: RunOptions }
-
-makeLenses ''Options
+import           Types
+import           Commands
 
 cellSizeReader :: ReadM CellSize
-cellSizeReader = maybeReader $ \case
-    "8"    -> Just CellWord8
-    "word" -> Just CellWordDefault
-    s      -> Nothing
+cellSizeReader =
+    -- TODO Find out how to print the error nicely
+    eitherReader (mapLeft show . runParser cellSizeParser "argument")
 
 runOptParse :: Parser RunOptions
 runOptParse =
@@ -99,6 +87,8 @@ withUnbuffering unbuf act = if unbuf
         return res
     else act
 
+-- TODO Is there a better way to do this (i.e. a way that duplicates less code)?
+-- This is weird because it has to choose the type at runtime.
 getBFAction :: CellSize -> BFOptions -> [BF] -> IO ()
 getBFAction size options code = case size of
     CellWord8 -> runBFMachine (interpretBF options code :: BrainfuckM Word8 ())
@@ -129,26 +119,31 @@ runFile path = do
 exit :: Exception e => e -> IO a
 exit e = putStrLn (displayException e) >> exitFailure
 
-data ReplState = ReplState
-    { _replPrompt :: String
-    , _replRunOpts :: RunOptions
-    }
-
-makeLenses ''ReplState
-
 runRepl :: (MonadReader RunOptions m, MonadIO m, MonadException m) => m ()
-runRepl = computeInitState >>= evalStateT (runInputT defaultSettings loop)  where
+runRepl = computeInitState >>= evalStateT (runInputT defaultSettings loop)
+  where
     computeInitState = ReplState <$> pure "% " <*> ask
 
-    loop             = do
-        prompt    <- lift $ use replPrompt
-        stateOpts <- lift $ use replRunOpts
-        input     <- getInputLine prompt
-        case input of
-            Nothing   -> return ()
-            Just code -> do
-                lift $ local (const stateOpts) $ runCode "" code
-                loop
+    runReplCommand (SetPrompt p) = lift $ replPrompt .= p
+    runReplCommand (SetUnbuffered b) =
+        lift $ replRunOpts . unbufferedInput .= b
+    runReplCommand (SetOptLevel o) =
+        lift $ replRunOpts . interpOptions . bfOptLevel .= o
+    runReplCommand (SetCellSize c) = lift $ replRunOpts . cellSize .= c
+
+    processInput input = case tryParseCommand input of
+        Right (Just cmd) -> runReplCommand cmd
+        Left  err        -> outputStrLn (show err)
+        Right Nothing    -> do
+            -- Not a command, so run as Brainfuck
+            stateOpts <- lift $ use replRunOpts
+            lift $ local (const stateOpts) $ runCode "" input
+
+    loop = do
+        prompt <- lift $ use replPrompt
+        input  <- getInputLine prompt
+        maybe (pure ()) processInput input
+        loop
 
 main :: IO ()
 main = do

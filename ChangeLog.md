@@ -2,6 +2,11 @@
 
 Versions follow the Haskell [PVP](https://pvp.haskell.org) specification.
 
+## [Unreleased]
+### Added
+- Added toChar and fromChar to BFCell class to allow for better conversion error
+  handling.
+
 ## [0.3.0.1] - 2019-09-19
 ### Changes
 - Added some meta-commands (starting with `:`) to the REPL.

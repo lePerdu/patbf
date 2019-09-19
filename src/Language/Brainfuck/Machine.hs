@@ -7,6 +7,7 @@ module Language.Brainfuck.Machine
     ( BFMachine
     , BrainfuckM
     , BFCell(..)
+    , BrainfuckError(..)
     , modifyHead
     , moveHead
     , readCell
@@ -18,19 +19,30 @@ module Language.Brainfuck.Machine
     )
 where
 
+import           Data.Char
 import           Data.Word
-import           Data.Functor                   ( void )
+import           Data.Functor
 import qualified Data.Vector.Unboxed.Mutable   as M
+import           Control.Exception
 import           Control.Monad.State.Strict
+import           Type.Reflection
 import           Lens.Micro.Platform
 
 -- | Type of cell which can be stored in a brainfuck machine
 -- TODO Make Boxed version so that Integer can be used
-class (Integral t, Num t, M.Unbox t, Show t) => BFCell t where
+class (Integral t, M.Unbox t, Show t) => BFCell t where
     -- | Attempts to solve the equation a + b*x = 0, modulo the maximum value of
     -- the cell if applicable.
     -- TODO Rename this
     solveWithWrap :: t -> t -> Maybe t
+
+    -- TODO Remove these unsafe default implementations?
+
+    toChar :: t -> Maybe Char
+    toChar = Just . chr . fromIntegral
+
+    fromChar :: Char -> Maybe t
+    fromChar = Just . fromIntegral . ord
 
 gcdRem :: Integral t => t -> t -> (t, t, t)
 gcdRem a b = if r == 0 then (b, 0, 1) else (g, y, x - y * q)  where
@@ -55,8 +67,18 @@ solveModulo a b =
 instance BFCell Word8 where
     solveWithWrap = solveModulo
 
+    fromChar c =
+        let int = ord c
+        in  if int <= fromIntegral (maxBound :: Word8)
+                then Just (fromIntegral int)
+                else Nothing
+
 instance BFCell Word where
     solveWithWrap = solveModulo
+
+    toChar n =
+        let maxChar = fromIntegral (fromEnum (maxBound :: Char)) :: Word
+        in  if n <= maxChar then Just (chr (fromIntegral n)) else Nothing
 
 data BFMachine t = BFMachine { _bfTape :: !(M.IOVector t)
                              , _bfHead :: !Int
@@ -71,6 +93,19 @@ initMachine :: BFCell t => IO (BFMachine t)
 initMachine = do
     initTape <- M.new initSize
     pure $ BFMachine initTape 0
+
+data BrainfuckError
+    = BadToCharConv
+    | BadFromCharConv Char
+    | NegativeTapeIndex Int
+    deriving (Show, Typeable)
+
+instance Exception BrainfuckError where
+    displayException BadToCharConv = "failed converting cell to character"
+    displayException (BadFromCharConv c) =
+        "could not convert character " ++ show c ++ " to cell"
+    displayException (NegativeTapeIndex i) =
+        "tried to modify negative tape index " ++ show i
 
 newtype BrainfuckM t a = BrainfuckM { unBF :: StateT (BFMachine t) IO a }
     deriving (Functor, Applicative, Monad, MonadState (BFMachine t), MonadIO)

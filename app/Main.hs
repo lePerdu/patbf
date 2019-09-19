@@ -9,7 +9,7 @@ import           System.Environment
 import           System.IO
 import           System.Exit
 import           System.IO.Error
-import           Control.Exception
+import           Control.Exception              ( Exception(..) )
 
 import           Control.Monad.Reader
 import           Control.Monad.State.Strict
@@ -101,38 +101,48 @@ runCode source code = do
     size       <- view cellSize
     unbuffered <- view unbufferedInput
     liftIO $ case fmap (getBFAction size opts) (runBFParser source code) of
-        Right action -> do
-            putStrLn "[Running]"
-            -- let _ = bf :: BrainfuckM Word8 ()
-            withUnbuffering unbuffered (catchIOError action exit)
-            -- Clear stdin so that unread keys from the execution don't remain
-            -- in the input buffer and come out after the program if done
-            clearStdin
-            putStrLn "[Done]"
+        Right action ->
+            flip catches handlers $ do
+                  putStrLn "[Running]"
+                  withUnbuffering unbuffered action
+                  -- Clear stdin so that unread keys from the execution don't
+                  -- remain in the input buffer and come out after the program
+                  -- is done
+                  clearStdin
+                  putStrLn "[Done]"
         Left e -> putStr "[Error] " >> putStrLn e
+  where
+    handleIOException :: IOException -> IO ()
+    handleIOException e = putStr "[IO Error] " >> putStrLn (displayException e)
+
+    handleBFException :: BrainfuckError -> IO ()
+    handleBFException e =
+        putStr "[Execution Error] " >> putStrLn (displayException e)
+
+    handleOther :: SomeException -> IO ()
+    handleOther e = putStr "[Unknown Error] " >> putStrLn (displayException e)
+
+    handlers =
+        [Handler handleIOException, Handler handleBFException, Handler handleOther]
 
 runFile :: (MonadReader RunOptions m, MonadIO m) => FilePath -> m ()
 runFile path = do
     code <- liftIO $ readFile path
     runCode path code
 
-exit :: Exception e => e -> IO a
-exit e = putStrLn (displayException e) >> exitFailure
-
 runRepl :: (MonadReader RunOptions m, MonadIO m, MonadException m) => m ()
 runRepl = computeInitState >>= evalStateT (runInputT defaultSettings loop)
   where
     computeInitState = ReplState <$> pure "% " <*> ask
 
-    runReplCommand (SetPrompt p) = lift $ replPrompt .= p
-    runReplCommand (SetUnbuffered b) =
-        lift $ replRunOpts . unbufferedInput .= b
+    runReplCommand (SetPrompt     p) = replPrompt .= p
+    runReplCommand (SetUnbuffered b) = replRunOpts . unbufferedInput .= b
     runReplCommand (SetOptLevel o) =
-        lift $ replRunOpts . interpOptions . bfOptLevel .= o
-    runReplCommand (SetCellSize c) = lift $ replRunOpts . cellSize .= c
+        replRunOpts . interpOptions . bfOptLevel .= o
+    runReplCommand (SetCellSize c) = replRunOpts . cellSize .= c
 
     processInput input = case tryParseCommand input of
-        Right (Just cmd) -> runReplCommand cmd
+        Right (Just cmd) -> lift $ runReplCommand cmd
         Left  err        -> outputStrLn (show err)
         Right Nothing    -> do
             -- Not a command, so run as Brainfuck

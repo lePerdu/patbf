@@ -54,8 +54,8 @@ gcdRem a b = if r == 0 then (b, 0, 1) else (g, y, x - y * q)  where
 -- in a fixed-sized integer.
 gcdRemMax :: Integral t => t -> (t, t, t)
 gcdRemMax b = if r == 0 then (b, 0, 1) else (g, y, x - y * q)  where
-    (q', r) = (-b) `divMod` b
-    q = q' + 1
+    (q', r)   = (-b) `divMod` b
+    q         = q' + 1
     (g, x, y) = gcdRem b r
 
 solveModulo :: (Integral t, Num t) => t -> t -> Maybe t
@@ -152,9 +152,12 @@ debugBF = do
     liftIO $ do
         putStrLn ""
         putStrLn $ "head = " ++ show pos
-        forM_ [0..len-1] (\i -> do
-            val <- M.read tape i
-            putStr $ show val ++ ",")
+        forM_
+            [0 .. len - 1]
+            (\i -> do
+                val <- M.read tape i
+                putStr $ show val ++ ","
+            )
         putStrLn ""
 
 runBFMachine :: BFCell t => BrainfuckM t () -> IO ()

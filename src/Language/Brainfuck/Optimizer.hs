@@ -17,7 +17,7 @@ import           Control.Monad                  ( foldM )
 import           Data.Maybe
 import qualified Data.IntMap                   as M
 
-import           Language.Brainfuck.Parser               ( BF(..) )
+import           Language.Brainfuck.Parser      ( BF(..) )
 
 data CollapsedBF a
     = Incr !a

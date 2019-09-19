@@ -9,7 +9,7 @@ import           Data.Void
 
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char.Lexer as Lex
+import qualified Text.Megaparsec.Char.Lexer    as Lex
 
 data BF
     = Increment

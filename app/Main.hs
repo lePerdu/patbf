@@ -101,15 +101,14 @@ runCode source code = do
     size       <- view cellSize
     unbuffered <- view unbufferedInput
     liftIO $ case fmap (getBFAction size opts) (runBFParser source code) of
-        Right action ->
-            flip catches handlers $ do
-                  putStrLn "[Running]"
-                  withUnbuffering unbuffered action
-                  -- Clear stdin so that unread keys from the execution don't
-                  -- remain in the input buffer and come out after the program
-                  -- is done
-                  clearStdin
-                  putStrLn "[Done]"
+        Right action -> flip catches handlers $ do
+            putStrLn "[Running]"
+            withUnbuffering unbuffered action
+            -- Clear stdin so that unread keys from the execution don't
+            -- remain in the input buffer and come out after the program
+            -- is done
+            clearStdin
+            putStrLn "[Done]"
         Left e -> putStr "[Error] " >> putStrLn e
   where
     handleIOException :: IOException -> IO ()
@@ -123,7 +122,10 @@ runCode source code = do
     handleOther e = putStr "[Unknown Error] " >> putStrLn (displayException e)
 
     handlers =
-        [Handler handleIOException, Handler handleBFException, Handler handleOther]
+        [ Handler handleIOException
+        , Handler handleBFException
+        , Handler handleOther
+        ]
 
 runFile :: (MonadReader RunOptions m, MonadIO m) => FilePath -> m ()
 runFile path = liftIO (readFile path) >>= runCode path
@@ -155,7 +157,7 @@ runRepl = computeInitState >>= evalStateT (runInputT defaultSettings loop)
         input  <- getInputLine prompt
         case input of
             Just input -> processInput input >> loop
-            Nothing -> return () -- Just exit
+            Nothing    -> return () -- Just exit
 
 main :: IO ()
 main = do

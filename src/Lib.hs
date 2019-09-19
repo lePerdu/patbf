@@ -6,25 +6,28 @@ module Lib
     )
 where
 
-import           Data.Parser
 import           Brainfuck.Parser
 import           Brainfuck.Interpret
 import           Brainfuck.Machine
 import           Brainfuck.Optimizer
 
+import           Data.Either.Combinators
+import           Text.Megaparsec
+
 -- Helper for the other functions
-processBFCode :: String -> Either String [BF]
-processBFCode text = case runParser parseBF text of
-    (Right code, []) -> Right code
-    (Right _, rest) -> Left $ "expected end of input, found " ++ show rest
-    (Left err, _) -> Left err
+processBFCode :: String -> String -> Either String [BF]
+processBFCode source text = mapLeft show $ runParser parseBF source text
 
-processBFSimple :: BFCell t => String -> Either String (BrainfuckM t ())
-processBFSimple = fmap interpretBF . processBFCode
+processBFSimple
+    :: BFCell t => String -> String -> Either String (BrainfuckM t ())
+processBFSimple source text = fmap interpretBF (processBFCode source text)
 
-processBFCollapsed :: BFCell t => String -> Either String (BrainfuckM t ())
-processBFCollapsed = fmap (interpretCollapsed . collapseBF) . processBFCode
+processBFCollapsed
+    :: BFCell t => String -> String -> Either String (BrainfuckM t ())
+processBFCollapsed source text =
+    fmap (interpretCollapsed . collapseBF) (processBFCode source text)
 
-processBFOpt :: BFCell t => String -> Either String (BrainfuckM t ())
-processBFOpt = fmap (interpretOpt . optimizeBF) . processBFCode
+processBFOpt :: BFCell t => String -> String -> Either String (BrainfuckM t ())
+processBFOpt source text =
+    fmap (interpretOpt . optimizeBF) (processBFCode source text)
 

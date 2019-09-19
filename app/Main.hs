@@ -100,28 +100,39 @@ withUnbuffering unbuf act = if unbuf
     else act
 
 getBFProcessor
-    :: BFCell t => OptLevel -> String -> Either String (BrainfuckM t ())
+    :: BFCell t
+    => OptLevel
+    -> String
+    -> String
+    -> Either String (BrainfuckM t ())
 getBFProcessor level = case level of
     None     -> processBFSimple
     Collapse -> processBFCollapsed
     FullOpt  -> processBFOpt
 
-getBFAction :: CellSize -> OptLevel -> String -> Either String (IO ())
-getBFAction size level code = case size of
+getBFAction :: CellSize -> OptLevel -> String -> String -> Either String (IO ())
+getBFAction size level source code = case size of
     CellWord8 ->
-        let p =
-                    getBFProcessor level code :: Either String (BrainfuckM Word8 ())
+        let
+            p =
+                getBFProcessor level source code :: Either
+                        String
+                        (BrainfuckM Word8 ())
         in  fmap runBFMachine p
     CellWordDefault ->
-        let p = getBFProcessor level code :: Either String (BrainfuckM Word ())
+        let
+            p =
+                getBFProcessor level source code :: Either
+                        String
+                        (BrainfuckM Word ())
         in  fmap runBFMachine p
 
-runCode :: (MonadReader RunOptions m, MonadIO m) => String -> m ()
-runCode code = do
-    opt        <- asks optLevel
-    size       <- asks cellSize
-    unbuffered <- asks unbufferedInput
-    liftIO $ case getBFAction size opt code of
+runCode :: (MonadReader RunOptions m, MonadIO m) => String -> String -> m ()
+runCode source code = do
+    opt        <- view optLevel
+    size       <- view cellSize
+    unbuffered <- view unbufferedInput
+    liftIO $ case getBFAction size opt source code of
         Right action -> do
             putStrLn "[Running]"
             -- let _ = bf :: BrainfuckM Word8 ()
@@ -135,7 +146,7 @@ runCode code = do
 runFile :: (MonadReader RunOptions m, MonadIO m) => FilePath -> m ()
 runFile path = do
     code <- liftIO $ readFile path
-    runCode code
+    runCode path code
 
 exit :: Exception e => e -> IO a
 exit e = putStrLn (displayException e) >> exitFailure
@@ -147,7 +158,7 @@ repl = runInputT defaultSettings loop  where
         case input of
             Nothing   -> return ()
             Just code -> do
-                lift $ runCode code
+                lift $ runCode "" code
                 loop
 
 main :: IO ()

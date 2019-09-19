@@ -5,9 +5,11 @@ module Brainfuck.Parser
 where
 
 import           Data.Functor
-import           Control.Applicative.Combinators
+import           Data.Void
 
-import           Data.Parser
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer as Lex
 
 data BF
     = Increment
@@ -20,21 +22,25 @@ data BF
     | Debug
     deriving (Show, Eq)
 
-command :: Parser Char BF
+-- TODO Use Text instead of String?
+type Parser = Parsec Void String
+
+command :: Parser BF
 command = choice $ zipWith
-    (\c bf -> token c $> bf)
+    (\c bf -> char c $> bf)
     "+-<>,.#"
     [Increment, Decrement, MoveLeft, MoveRight, Input, Output, Debug]
 
-loop :: Parser Char BF
-loop = Loop <$> between (token '[') (token ']') parseBF
+loop :: Parser BF
+loop = Loop <$> between (char '[') (char ']') parseBF
 
-comment :: Parser Char ()
-comment = void $ many (satisfy (`notElem` "+-<>[].,#"))
+comment :: Parser ()
+comment = void $ takeWhileP (Just "comment") (`notElem` "+-<>[].,#")
 
-parseBFInstr :: Parser Char BF
+parseBFInstr :: Parser BF
 parseBFInstr = command <|> loop
 
-parseBF :: Parser Char [BF]
-parseBF = comment *> many (parseBFInstr <* option () comment)
+-- TODO Should this require matching eof?
+parseBF :: Parser [BF]
+parseBF = comment *> many (Lex.lexeme comment parseBFInstr) <* eof
 

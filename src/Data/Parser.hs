@@ -1,5 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
 
+-- | Simple, generic list parser for matching on patterns in lists of arbitrary
+-- data.
+-- This is used to find and pply optimizations on Brainfuck code. Megaparsec is
+-- used for actual text parsing, but has some features that don't make as much
+-- sense when applied to non-text-related "parsing".
+--
+-- There is probably a better way to represent the Brainfuck transformations; if
+-- such a way is found, this module will go away.
 module Data.Parser
     ( Parser
     , runParser
@@ -14,7 +22,7 @@ import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Fail
 
-import           Control.Arrow                  ( first )
+import           Lens.Micro.Platform
 
 type Result = Either String
 
@@ -30,7 +38,7 @@ runParser' :: Parser t a -> [t] -> Result a
 runParser' p = fst . runParser p
 
 instance Functor (Parser t) where
-    fmap f (Parser p) = Parser (first (fmap f) . p)
+    fmap f (Parser p) = Parser (over _1 (fmap f) . p)
 
 instance Applicative (Parser t) where
     pure a = Parser (success a)
@@ -46,7 +54,7 @@ instance Alternative (Parser t) where
 
     Parser pa <|> Parser pb = Parser $ \ts -> case pa ts of
         (Right a, ts') -> (Right a, ts')
-        _ -> pb ts
+        _              -> pb ts
 
 instance Monad (Parser t) where
     Parser pa >>= f = Parser $ \ts -> case pa ts of

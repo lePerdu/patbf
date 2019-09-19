@@ -126,9 +126,10 @@ runCode source code = do
         [Handler handleIOException, Handler handleBFException, Handler handleOther]
 
 runFile :: (MonadReader RunOptions m, MonadIO m) => FilePath -> m ()
-runFile path = do
-    code <- liftIO $ readFile path
-    runCode path code
+runFile path = liftIO (readFile path) >>= runCode path
+
+runStdInput :: (MonadReader RunOptions m, MonadIO m) => m ()
+runStdInput = liftIO getContents >>= runCode "stdin"
 
 runRepl :: (MonadReader RunOptions m, MonadIO m, MonadException m) => m ()
 runRepl = computeInitState >>= evalStateT (runInputT defaultSettings loop)
@@ -161,6 +162,8 @@ main = do
     Options { _fileName = fname, _runOptions = opts } <- execParser optinfo
     let act = case fname of
             Just name -> runFile name
-            Nothing   -> runRepl
+            Nothing   -> do
+                isTerm <- liftIO $ hIsTerminalDevice stdin
+                if isTerm then runRepl else runStdInput
     runReaderT act opts
 

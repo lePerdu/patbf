@@ -152,8 +152,9 @@ runRepl = computeInitState >>= evalStateT (runInputT defaultSettings loop)
     loop = do
         prompt <- lift $ use replPrompt
         input  <- getInputLine prompt
-        maybe (pure ()) processInput input
-        loop
+        case input of
+            Just input -> processInput input >> loop
+            Nothing -> return () -- Just exit
 
 main :: IO ()
 main = do

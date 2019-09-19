@@ -2,6 +2,12 @@
 
 Versions follow the Haskell [PVP](https://pvp.haskell.org) specification.
 
+## [0.3.0.0] - 2019-09-19
+### Changes
+- Re-structured the module name hierarchy:
+  - The main entry point is `Pinky`
+  - Brainfuck-specific parts are in `Language.Brainfuck`
+
 ## [0.2.0.0] - 2019-09-18
 ### Changes
 - Switch to Megaparsec from the custom parsing library. This allows for slightly
@@ -21,6 +27,7 @@ Versions follow the Haskell [PVP](https://pvp.haskell.org) specification.
 - Basic command-line interface and REPL
 
 [Unreleased]: https://github.com/lePerdu/pinky
+[0.3.0.0]: https://github.com/lePerdu/releases/tag/0.3.0.0
 [0.2.0.0]: https://github.com/lePerdu/releases/tag/0.2.0.0
 [0.1.0.1]: https://github.com/lePerdu/releases/tag/0.1.0.1
 [0.1.0.0]: https://github.com/lePerdu/releases/tag/0.1.0.0

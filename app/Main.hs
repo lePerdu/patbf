@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
@@ -11,34 +12,36 @@ import           System.IO.Error
 import           Control.Exception
 
 import           Control.Monad.Reader
+import           Control.Monad.State.Strict
 
 import           Control.Monad                  ( when )
 
 import           Options.Applicative
 
 import           System.Console.Haskeline
+import           Lens.Micro.Platform
 
-import           Lib
-import           Brainfuck.Machine
+import           Pinky
 
-data OptLevel = None | Collapse | FullOpt deriving (Eq)
-
-data CellSize = CellWord8 | CellWordDefault -- CellInf
+data CellSize = CellWord8 | CellWordDefault deriving (Eq)
 
 data RunOptions = RunOptions
-    { unbufferedInput :: Bool
-    , optLevel :: OptLevel
-    , cellSize :: CellSize
-    , debug :: Bool
+    { _unbufferedInput :: Bool
+    , _cellSize :: CellSize
+    , _interpOptions :: BFOptions
     }
 
-data Options = Options { fileName :: Maybe String, runOptions :: RunOptions }
+makeLenses ''RunOptions
+
+data Options = Options { _fileName :: Maybe String, _runOptions :: RunOptions }
+
+makeLenses ''Options
 
 cellSizeReader :: ReadM CellSize
-cellSizeReader = eitherReader $ \case
-    "8"    -> Right CellWord8
-    "word" -> Right CellWordDefault
-    s      -> Left $ "Invalid cell size: " ++ s
+cellSizeReader = maybeReader $ \case
+    "8"    -> Just CellWord8
+    "word" -> Just CellWordDefault
+    s      -> Nothing
 
 runOptParse :: Parser RunOptions
 runOptParse =
@@ -46,12 +49,6 @@ runOptParse =
         <$> switch
                 (short 'u' <> long "unbuffered" <> help
                     "whether to unbuffer the input stream"
-                )
-        <*> flag
-                None
-                FullOpt
-                (short 'o' <> long "optimize" <> help
-                    "whether to optimize the brainfuck code"
                 )
         <*> option
                 cellSizeReader
@@ -61,9 +58,13 @@ runOptParse =
                 <> value CellWord8
                 <> help "cell size to use"
                 )
-        <*> switch
-                (short 'd' <> long "debug" <> help "whether to enable debugging"
+        <*> (BFOptions <$> flag
+                NoOptimize
+                FullOptimize
+                (short 'o' <> long "optimize" <> help
+                    "whether to optimize the brainfuck code"
                 )
+            )
 
 optparse :: Parser Options
 optparse =
@@ -71,12 +72,11 @@ optparse =
         <$> optional
                 (argument
                     str
-                    (  metavar "FILE"
-                    <> help
-                           (  "file to execute; "
-                           ++ "if no file is given, this runs an interactive "
-                           ++ "REPL"
-                           )
+                    (metavar "FILE" <> help
+                        (  "file to execute; "
+                        ++ "if no file is given, this runs an interactive "
+                        ++ "REPL"
+                        )
                     )
                 )
         <*> runOptParse
@@ -99,40 +99,18 @@ withUnbuffering unbuf act = if unbuf
         return res
     else act
 
-getBFProcessor
-    :: BFCell t
-    => OptLevel
-    -> String
-    -> String
-    -> Either String (BrainfuckM t ())
-getBFProcessor level = case level of
-    None     -> processBFSimple
-    Collapse -> processBFCollapsed
-    FullOpt  -> processBFOpt
-
-getBFAction :: CellSize -> OptLevel -> String -> String -> Either String (IO ())
-getBFAction size level source code = case size of
-    CellWord8 ->
-        let
-            p =
-                getBFProcessor level source code :: Either
-                        String
-                        (BrainfuckM Word8 ())
-        in  fmap runBFMachine p
+getBFAction :: CellSize -> BFOptions -> [BF] -> IO ()
+getBFAction size options code = case size of
+    CellWord8 -> runBFMachine (interpretBF options code :: BrainfuckM Word8 ())
     CellWordDefault ->
-        let
-            p =
-                getBFProcessor level source code :: Either
-                        String
-                        (BrainfuckM Word ())
-        in  fmap runBFMachine p
+        runBFMachine (interpretBF options code :: BrainfuckM Word ())
 
 runCode :: (MonadReader RunOptions m, MonadIO m) => String -> String -> m ()
 runCode source code = do
-    opt        <- view optLevel
+    opts       <- view interpOptions
     size       <- view cellSize
     unbuffered <- view unbufferedInput
-    liftIO $ case getBFAction size opt source code of
+    liftIO $ case fmap (getBFAction size opts) (runBFParser source code) of
         Right action -> do
             putStrLn "[Running]"
             -- let _ = bf :: BrainfuckM Word8 ()
@@ -151,21 +129,32 @@ runFile path = do
 exit :: Exception e => e -> IO a
 exit e = putStrLn (displayException e) >> exitFailure
 
-repl :: (MonadReader RunOptions m, MonadIO m, MonadException m) => m ()
-repl = runInputT defaultSettings loop  where
-    loop = do
-        input <- getInputLine "% "
+data ReplState = ReplState
+    { _replPrompt :: String
+    , _replRunOpts :: RunOptions
+    }
+
+makeLenses ''ReplState
+
+runRepl :: (MonadReader RunOptions m, MonadIO m, MonadException m) => m ()
+runRepl = computeInitState >>= evalStateT (runInputT defaultSettings loop)  where
+    computeInitState = ReplState <$> pure "% " <*> ask
+
+    loop             = do
+        prompt    <- lift $ use replPrompt
+        stateOpts <- lift $ use replRunOpts
+        input     <- getInputLine prompt
         case input of
             Nothing   -> return ()
             Just code -> do
-                lift $ runCode "" code
+                lift $ local (const stateOpts) $ runCode "" code
                 loop
 
 main :: IO ()
 main = do
-    options <- execParser optinfo
-    let act = case fileName options of
+    Options { _fileName = fname, _runOptions = opts } <- execParser optinfo
+    let act = case fname of
             Just name -> runFile name
-            Nothing   -> repl
-    runReaderT act (runOptions options)
+            Nothing   -> runRepl
+    runReaderT act opts
 

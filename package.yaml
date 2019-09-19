@@ -1,5 +1,5 @@
 name:                pinky
-version:             0.2.0.0
+version:             0.3.0.0
 github:              "lePerdu/pinky"
 license:             BSD3
 author:              "Zach Peltzer"
@@ -24,16 +24,20 @@ dependencies:
 - base >= 4.7 && < 5
 - containers
 - either
-- parser-combinators
 - megaparsec
 - microlens-platform
 - mtl
+- parser-combinators
 - vector
-- optparse-applicative
-- haskeline
 
 library:
   source-dirs: src
+  exposed-modules:
+  - Pinky
+  - Language.Brainfuck.Parser
+  - Language.Brainfuck.Optimizer
+  - Language.Brainfuck.Interpreter
+  - Language.Brainfuck.Machine
 
 executables:
   pinky:
@@ -45,6 +49,8 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - pinky
+    - haskeline
+    - optparse-applicative
 
 # TODO Implement some actual tests
 # tests:

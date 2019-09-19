@@ -1,18 +1,23 @@
-module Brainfuck.Interpret where
+module Language.Brainfuck.Interpreter
+    ( interpretBasic
+    , interpretCollapsed
+    , interpretOpt
+    )
+where
 
 import qualified Data.IntMap.Strict            as M
 
-import           Brainfuck.Parser
-import           Brainfuck.Machine
-import           Brainfuck.Optimizer
+import           Language.Brainfuck.Parser
+import           Language.Brainfuck.Machine
+import           Language.Brainfuck.Optimizer
 import           Control.Monad.IO.Class
 import           Control.Monad
 
 convertEnum :: (Enum a, Enum b) => a -> b
 convertEnum = toEnum . fromEnum
 
-interpretBF :: BFCell t => [BF] -> BrainfuckM t ()
-interpretBF = mapM_ interpInstr  where
+interpretBasic :: BFCell t => [BF] -> BrainfuckM t ()
+interpretBasic = mapM_ interpInstr  where
     interpInstr Increment   = modifyCell (+ 1)
     interpInstr Decrement   = modifyCell (\n -> n - 1)
     interpInstr MoveLeft    = moveHead (-1)
@@ -21,7 +26,7 @@ interpretBF = mapM_ interpInstr  where
     interpInstr Output      = readCell >>= liftIO . putChar . convertEnum
     interpInstr (Loop code) = do
         cell <- readCell
-        unless (cell == 0) (interpretBF code >> interpInstr (Loop code))
+        unless (cell == 0) (interpretBasic code >> interpInstr (Loop code))
     interpInstr Debug = debugBF
 
 interpretCollapsed :: BFCell t => [CollapsedBF t] -> BrainfuckM t ()

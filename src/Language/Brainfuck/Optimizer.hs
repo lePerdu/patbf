@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Brainfuck.Optimizer
+module Language.Brainfuck.Optimizer
     ( CollapsedBF(..)
     , OptBF(..)
     , LinearIncr(..)
@@ -10,14 +10,14 @@ module Brainfuck.Optimizer
     )
 where
 
-import           Data.Parser
+import           Pinky.Internal.Parser
 import           Control.Applicative.Combinators
 import           Data.Functor
 import           Control.Monad                  ( foldM )
 import           Data.Maybe
 import qualified Data.IntMap                   as M
 
-import           Brainfuck.Parser               ( BF(..) )
+import           Language.Brainfuck.Parser               ( BF(..) )
 
 data CollapsedBF a
     = Incr !a

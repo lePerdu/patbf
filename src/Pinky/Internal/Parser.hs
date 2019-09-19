@@ -8,7 +8,7 @@
 --
 -- There is probably a better way to represent the Brainfuck transformations; if
 -- such a way is found, this module will go away.
-module Data.Parser
+module Pinky.Internal.Parser
     ( Parser
     , runParser
     , runParser'

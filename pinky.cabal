@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a129b4d3a0c61b0937e24d48f1fe6b971eaa78a366aca913ebda8488a678cc38
+-- hash: 8dc6e2da2ae39255e58e5dda9274e71ede7b6a65a7a02c72068240ec75e30d61
 
 name:           pinky
-version:        0.1.0.1
+version:        0.3.0.0
 synopsis:       An optimizing Brainfuck interpreter
 description:    Please see the README on GitHub at <https://github.com/lePerdu/pinky#README>
 category:       Languages, CommandLine, REPL
@@ -29,13 +29,13 @@ source-repository head
 
 library
   exposed-modules:
-      Brainfuck.Interpret
-      Brainfuck.Machine
-      Brainfuck.Optimizer
-      Brainfuck.Parser
-      Data.Parser
-      Lib
+      Pinky
+      Language.Brainfuck.Parser
+      Language.Brainfuck.Optimizer
+      Language.Brainfuck.Interpreter
+      Language.Brainfuck.Machine
   other-modules:
+      Pinky.Internal.Parser
       Paths_pinky
   hs-source-dirs:
       src
@@ -43,11 +43,9 @@ library
       base >=4.7 && <5
     , containers
     , either
-    , haskeline
     , megaparsec
     , microlens-platform
     , mtl
-    , optparse-applicative
     , parser-combinators
     , vector
   default-language: Haskell2010

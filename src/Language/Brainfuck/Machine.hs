@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Brainfuck.Machine
+module Language.Brainfuck.Machine
     ( BFMachine
     , BrainfuckM
     , BFCell(..)

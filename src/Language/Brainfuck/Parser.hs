@@ -1,4 +1,4 @@
-module Brainfuck.Parser
+module Language.Brainfuck.Parser
     ( BF(..)
     , parseBF
     )

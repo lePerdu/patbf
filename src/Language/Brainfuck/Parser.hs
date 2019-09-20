@@ -32,15 +32,18 @@ command = choice $ zipWith
     [Increment, Decrement, MoveLeft, MoveRight, Input, Output, Debug]
 
 loop :: Parser BF
-loop = Loop <$> between (char '[') (char ']') parseBF
+loop = Loop <$> between (char '[') (char ']') parseBFInstrs
 
 comment :: Parser ()
 comment = void $ takeWhileP (Just "comment") (`notElem` "+-<>[].,#")
 
-parseBFInstr :: Parser BF
-parseBFInstr = command <|> loop
+parseInstr :: Parser BF
+parseInstr = command <|> loop
 
 -- TODO Should this require matching eof?
+parseBFInstrs :: Parser [BF]
+parseBFInstrs = comment *> many (Lex.lexeme comment parseInstr)
+
 parseBF :: Parser [BF]
-parseBF = comment *> many (Lex.lexeme comment parseBFInstr) <* eof
+parseBF = parseBFInstrs <* eof
 

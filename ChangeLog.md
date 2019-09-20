@@ -2,10 +2,14 @@
 
 Versions follow the Haskell [PVP](https://pvp.haskell.org) specification.
 
-## [Unreleased]
+## [0.3.0.2] - 2019-09-20
 ### Added
 - Added toChar and fromChar to BFCell class to allow for better conversion error
   handling.
+
+### Fixes
+- Unbuffering option now actually sets unbuffering.
+- Fixed loop parser (now it works again).
 
 ## [0.3.0.1] - 2019-09-19
 ### Changes
@@ -36,6 +40,7 @@ Versions follow the Haskell [PVP](https://pvp.haskell.org) specification.
 - Basic command-line interface and REPL
 
 [Unreleased]: https://github.com/lePerdu/pinky
+[0.3.0.2]: https://github.com/lePerdu/pinky/releases/tag/0.3.0.2
 [0.3.0.1]: https://github.com/lePerdu/pinky/releases/tag/0.3.0.1
 [0.3.0.0]: https://github.com/lePerdu/pinky/releases/tag/0.3.0.0
 [0.2.0.0]: https://github.com/lePerdu/pinky/releases/tag/0.2.0.0

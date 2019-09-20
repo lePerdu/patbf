@@ -82,6 +82,7 @@ withUnbuffering :: Bool -> IO a -> IO a
 withUnbuffering unbuf act = if unbuf
     then do
         orig <- hGetBuffering stdin
+        hSetBuffering stdin NoBuffering
         res  <- act
         hSetBuffering stdin orig
         return res

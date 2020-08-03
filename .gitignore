@@ -1,0 +1,7 @@
+.stack-work/
+
+# Backups
+*~
+
+# MacOS stuff
+.DS_Store

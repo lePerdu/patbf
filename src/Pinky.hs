@@ -1,0 +1,76 @@
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- | High-level wrappers functions for common use cases.
+module Pinky
+  ( OptimizeLevel (..),
+    BfOptions (..),
+    Bf (..),
+    bfOptLevel,
+    runBfParser,
+    interpretBf,
+    runBf,
+  )
+where
+
+import Data.Text (Text, pack)
+import Data.Word
+import Data.Either.Combinators
+import Lens.Micro.Platform
+import Pinky.Brainfuck.Language
+import Pinky.Brainfuck.Machine
+import Pinky.Brainfuck.Naive
+import Pinky.Brainfuck.Optimizer
+import Pinky.Brainfuck.Parser
+import Text.Megaparsec
+
+-- | Possible optimization levels
+--
+-- NoOptimize runs the original syntax tree directly.
+--
+-- FullOptimize does the "simple" optimizations and also removes certain types
+-- of loops.
+--
+-- See Pinky.Brainfuck.Optimizer for more details
+data OptimizeLevel = NoOptimize | FullOptimize deriving (Eq)
+
+-- | A record of options for running Brainfuck code
+newtype BfOptions = BfOptions {_bfOptLevel :: OptimizeLevel} deriving (Eq)
+
+makeLenses ''BfOptions
+
+-- | Parse Brainfuck code into the basic syntax tree.
+runBfParser ::
+  -- | Name of the source file (for error messages)
+  String ->
+  -- | Brainfuck code to parse
+  Text ->
+  -- | Parsed code or an error message
+  Either String Bf
+runBfParser source text = mapLeft show $ runParser parseBf source text
+
+-- | Convert brainfuck code into a BrainfuckMachine action.
+--
+-- This is simply a dispatcher for various interpreters.
+interpretBf ::
+  forall m c.
+  (BrainfuckMachine m, BfOptCell c, MachineCell m ~ c) =>
+  -- | Options for interpreting the Brainfuck code
+  BfOptions ->
+  -- | Code to interpret
+  Bf ->
+  -- | BrainfuckM action
+  m ()
+interpretBf options = case _bfOptLevel options of
+  NoOptimize -> interpretBasic
+  FullOptimize -> interpretOptimized
+
+-- | Runs un-optimized Brainfuck in IO.
+--
+-- Useful for debugging.
+runBf :: String -> IO ()
+runBf source = do
+    runIOMachine (interpretBasic code :: IOMachine Word8 ())
+  where
+    Right code = runBfParser "" (pack source)

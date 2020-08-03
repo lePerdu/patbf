@@ -1,0 +1,75 @@
+name:                pinky
+version:             0.1.0
+github:              "lePerdu/pinky"
+license:             BSD3
+author:              "Zach Peltzer"
+maintainer:          "zdpeltzer@gmail.com"
+copyright:           "2020 Zach Peltzer"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+synopsis:            An optimizing Brainfuck interpreter
+category:            Languages, CommandLine, REPL
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:
+  Please see the README on GitHub at <https://github.com/lePerdu/pinky#README>
+
+dependencies:
+- base >= 4.7 && < 5
+- array
+- containers
+- either
+- megaparsec
+- microlens-platform
+- mtl
+- primitive
+# - STMonadTrans
+- text
+# - vector
+
+library:
+  source-dirs: src
+  exposed-modules:
+  - Pinky
+  - Pinky.Brainfuck
+  - Pinky.Brainfuck.Language
+  - Pinky.Brainfuck.Machine
+  - Pinky.Brainfuck.Monad
+  - Pinky.Brainfuck.Naive
+  - Pinky.Brainfuck.Optimizer
+  - Pinky.Brainfuck.Optimizer.Internal
+  - Pinky.Brainfuck.Parser
+  - Pinky.Brainfuck.Tape
+
+executables:
+  pinkybf:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - haskeline
+    - optparse-applicative
+    - pinky
+
+tests:
+  pinky-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hspec
+    - pinky
+    - QuickCheck
+    - test-invariant

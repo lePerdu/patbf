@@ -40,17 +40,13 @@ getTapeBounds :: Bf -> (Int, Int)
 getTapeBounds (Bf code) =
   (length (filter (== MoveLeft) code), length (filter (== MoveRight) code))
 
--- | Trim the right side of the tape.
-trimTape :: Int -> BfState c -> BfState c
-trimTape size (BfState l h r) = BfState l h (take size r)
-
 runBoundedTape ::
   BfCell c => Bf -> BrainfuckTape c (BufferMachine c) a -> BfState c
 runBoundedTape bf action =
   let (lBound, rBound) = getTapeBounds bf
       machine = runBfTape (moveHead lBound >> action)
       ((_, tape), _) = runBufferMachine machine ""
-   in trimTape rBound tape
+   in truncateTape rBound tape
 
 runOptBounded :: BfOptCell c => Bf -> BfState c
 runOptBounded bf =

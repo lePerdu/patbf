@@ -11,6 +11,7 @@ module Pinky.Brainfuck.Tape
     BrainfuckTape,
     BfCell (..),
     BfError (..),
+    truncateTape,
     moveHeadLeft,
     moveHeadRight,
     moveHead,
@@ -42,6 +43,10 @@ data BfState t = BfState
 
 initTape :: BfCell t => BfState t
 initTape = BfState [] 0 (repeat 0)
+
+-- | Trim the right side of the tape.
+truncateTape :: Int -> BfState c -> BfState c
+truncateTape size (BfState l h r) = BfState l h (take size r)
 
 data BfError
   = BadToCharConv

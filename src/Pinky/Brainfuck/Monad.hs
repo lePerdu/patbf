@@ -13,10 +13,12 @@ module Pinky.Brainfuck.Monad
     debug,
     loop,
     intoBf,
+    fromBf,
   )
 where
 
 import Control.Monad.Writer
+import Data.Foldable
 import Pinky.Brainfuck.Language
 
 -- | Monadic DSL for writing Brainfuck code
@@ -69,3 +71,7 @@ loop = tellInstr . Loop . intoBf
 -- | Convert into raw Brainfuck code
 intoBf :: BrainfuckM () -> Bf
 intoBf = execWriter . unBfM
+
+-- | Convert from raw Brainfuck code
+fromBf :: Bf -> BrainfuckM ()
+fromBf (Bf code) = traverse_ tellInstr code

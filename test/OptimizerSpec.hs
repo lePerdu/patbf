@@ -45,7 +45,7 @@ runBoundedTape ::
 runBoundedTape bf action =
   let (lBound, rBound) = getTapeBounds bf
       machine = runBfTape (moveHead lBound >> action)
-      ((_, tape), _) = runBufferMachine machine ""
+      ((_, tape), _) = runBufferMachine machine []
    in truncateTape rBound tape
 
 runOptBounded :: BfOptCell c => Bf -> BfState c
@@ -102,28 +102,29 @@ cellTypeSpec = CellTypeSpec $ do
 
   it "empty program" $
     property $
-      \input -> runBfOpt emptyProgram input === (input, "")
+      \input -> runBfOpt emptyProgram input === (input, [])
 
   it "cat program" $
     property $
-      \(NonNull input) -> runBfOpt catProgram input === ("", input)
+      \(NonNull input) -> runBfOpt catProgram input === ([], input)
 
   it "reverse program" $
     property $
-      \(NonNull input) -> runBfOpt reverseProgram input === ("", reverse input)
+      \(NonNull input) -> runBfOpt reverseProgram input === ([], reverse input)
 
   it "print0 program" $
     property $
-      \(NonNull input) -> runBfOpt print0Program input === (input, "0")
+      \(NonNull input) -> runBfOpt print0Program input === (input, [48])
 
   it "hello world program" $
     property $
       \(NonNull input) ->
-        runBfOpt helloWorldProgram input === (input, "Hello World!\n")
+        runBfOpt helloWorldProgram input === (input, helloWorld)
   where
     cellAdd' = cellAdd :: CellExpr c -> CellExpr c -> CellExpr c
     cellMul' = cellMul :: CellExpr c -> CellExpr c -> CellExpr c
 
+    runBfOpt :: Bf -> [c] -> ([c], [c])
     runBfOpt code input =
       execBufferMachine (interpretOptimized code :: BufferMachine c ()) input
 

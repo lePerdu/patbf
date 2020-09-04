@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Pinky.Brainfuck.Machine
@@ -22,91 +21,67 @@ import Lens.Micro.Platform
 import System.IO
 
 -- | Type of cell which can be stored in a brainfuck machine
-class (Integral t, Show t) => BfCell t where
-  -- TODO Remove these unsafe default implementations?
+class (Integral t, Show t) => BfCell t
 
-  toChar :: t -> Maybe Char
-  toChar = Just . chr . fromIntegral
+instance BfCell Word8
+instance BfCell Word
 
-  fromChar :: Char -> Maybe t
-  fromChar = Just . fromIntegral . ord
 
-instance BfCell Word8 where
-  fromChar c =
-    let int = ord c
-     in if int <= fromIntegral (maxBound :: Word8)
-          then Just (fromIntegral int)
-          else Nothing
-
-instance BfCell Word where
-  toChar n =
-    let maxChar = fromIntegral (fromEnum (maxBound :: Char)) :: Word
-     in if n <= maxChar then Just (chr (fromIntegral n)) else Nothing
-
--- | Brainfuck execution environment
+-- | Type class for Brainfuck I/O operations.
 --
--- Describes the semantics of the execution (i.e. cell size and wrapping) and
--- I/O.
---
--- TODO Rename?
-class Monad m => BrainfuckMachine m where
-  type MachineCell m
+-- This is parameterized by the cell type 'c', although most implementations
+-- should work for any cell type. Instances are responsable for deciding whether
+-- I/O is byte-oriented or character-oriented in some encoding, and converting
+-- to and from the cell type.
+class (Monad m, BfCell c) => BrainfuckMachine m c | m -> c where
+  -- | Output a single cell.
+  bfPutChar :: c -> m ()
 
-  -- | Output a single character
-  bfPutChar :: MachineCell m -> m ()
-
-  -- | Input a single character
+  -- | Input into a cell.
   --
-  -- This may return Nothing on end of input.
-  bfGetChar :: m (Maybe (MachineCell m))
+  -- Should return Nothing on EOF.
+  bfGetChar :: m (Maybe c)
 
--- BrainfuckMachine running in IO
+-- | BrainfuckMachine running in IO
+--
+-- Input is processed in Haskell Chars.
 newtype IOMachine c a = IOMachine {runIOMachine :: IO a}
   deriving (Functor, Applicative, Monad)
 
-instance BfCell c => BrainfuckMachine (IOMachine c) where
-  type MachineCell (IOMachine c) = c
-
-  bfPutChar = IOMachine . maybe (pure ()) putChar . toChar
+instance BfCell c => BrainfuckMachine (IOMachine c) c where
+  bfPutChar = IOMachine . putChar . chr . fromIntegral
   bfGetChar = IOMachine $ do
     eof <- isEOF
     if eof
-      then return $ Just 0
-      else fromChar <$> getChar
+      then return Nothing
+      else fmap (Just . fromIntegral . ord) getChar
 
--- BrainfuckMachine using Strings buffers for input and output
+-- | BrainfuckMachine using pre-set buffers for input and output
 --
 -- Useful for testing Brainfuck execution in a pure context.
---
--- TODO Use Text or ShowS for more efficient appending to output
 newtype BufferMachine c a = BufferMachine
-  {_unBufferMachine :: State (String, String) a}
+  {_unBufferMachine :: State ([c], [c]) a}
   deriving (Functor, Applicative, Monad)
 
-instance BfCell c => BrainfuckMachine (BufferMachine c) where
-  type MachineCell (BufferMachine c) = c
-
-  -- TODO Decide/define behavior when char conversion fails
-  bfPutChar val =
-    let s = maybe "" (: "") (toChar val)
-     in BufferMachine $ modifying _2 (++ s)
+instance BfCell c => BrainfuckMachine (BufferMachine c) c where
+  bfPutChar val = BufferMachine $ modifying _2 (++ [val])
   bfGetChar = BufferMachine $ do
     input <- use _1
     case input of
       c : rest -> do
         _1 .= rest
-        return $ fromChar c
-      [] -> return $ Just 0
+        return $ Just c
+      [] -> return $ Nothing
 
--- Runs a BufferMachine with given input, returning computed value, output,
--- and, unread input.
+-- Runs a BufferMachine with given input, returning computed value, unread
+-- input, and the output
 runBufferMachine ::
-  BfCell c => BufferMachine c a -> String -> (a, (String, String))
+  BfCell c => BufferMachine c a -> [c] -> (a, ([c], [c]))
 runBufferMachine machine input =
-  runState (_unBufferMachine machine) (input, "")
+  runState (_unBufferMachine machine) (input, [])
 
--- Runs a BufferMachine with given input, returning output and unread input.
+-- Runs a BufferMachine with given input, returning unread input and the output.
 execBufferMachine ::
-  BfCell c => BufferMachine c () -> String -> (String, String)
+  BfCell c => BufferMachine c () -> [c] -> ([c], [c])
 execBufferMachine machine input =
-  execState (_unBufferMachine machine) (input, "")
+  execState (_unBufferMachine machine) (input, [])

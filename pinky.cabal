@@ -38,7 +38,6 @@ library
       Pinky.Brainfuck.Parser
       Pinky.Brainfuck.Tape
   other-modules:
-      Pinky.Brainfuck.Internal.Helpers
       Paths_pinky
   hs-source-dirs:
       src

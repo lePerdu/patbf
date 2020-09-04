@@ -1,6 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Pinky.Brainfuck.Optimizer.Internal where
@@ -17,7 +15,6 @@ import Data.Maybe
   )
 import Data.Word
 import Lens.Micro.Platform
-import Pinky.Brainfuck.Internal.Helpers
 import Pinky.Brainfuck.Language
 import Pinky.Brainfuck.Machine
 import Pinky.Brainfuck.Monad
@@ -269,7 +266,7 @@ tapeEffLoop (TapeEffect exprs endOffset)
 -- Note that the effects are run in reverse order since that is how they are
 -- built.
 runBfEffects ::
-  (BrainfuckMachine m, BfCell c, MachineCell m ~ c) =>
+  (BfCell c, BrainfuckMachine m c) =>
   [BfEffect c] ->
   BrainfuckTape c m ()
 runBfEffects [] = pure ()
@@ -277,15 +274,12 @@ runBfEffects (eff : rest) = runBfEffects rest >> runBfEffect eff
 
 -- | Runs a single effect on a Brainfuck tape
 runBfEffect ::
-  (BrainfuckMachine m, BfCell c, MachineCell m ~ c) =>
-  BfEffect c ->
-  BrainfuckTape c m ()
+  (BfCell c, BrainfuckMachine m c) => BfEffect c -> BrainfuckTape c m ()
 runBfEffect (TapeEff eff) = runTapeEffect eff
 runBfEffect InputEff = do
   input <- lift bfGetChar
-  case input of
-    Just value -> setCell value
-    Nothing -> pure ()
+  -- TODO Abstract out EOF handling
+  setCell (fromMaybe 0 input)
 runBfEffect OutputEff = readCell >>= lift . bfPutChar
 runBfEffect (LoopEff loopCode) = runLoop
   where
@@ -295,9 +289,7 @@ runBfEffect (LoopEff loopCode) = runLoop
 
 -- | Runs a "pure" tape effect on a Brainfuck tape
 runTapeEffect ::
-  (BrainfuckMachine m, BfCell c, MachineCell m ~ c) =>
-  TapeEffect c ->
-  BrainfuckTape c m ()
+  (BfCell c, BrainfuckMachine m c) => TapeEffect c -> BrainfuckTape c m ()
 runTapeEffect (TapeEffect exprs offset) = do
   -- Evaluate the cells first since they should not be inter-dependantly
   -- calculated
@@ -308,10 +300,7 @@ runTapeEffect (TapeEffect exprs offset) = do
 
 -- | Use tape state to evaluate a CellExpr
 evalCellExpr ::
-  (BrainfuckMachine m, BfCell c, MachineCell m ~ c) =>
-  Int ->
-  CellExpr c ->
-  BrainfuckTape c m c
+  (BfCell c, BrainfuckMachine m c) => Int -> CellExpr c -> BrainfuckTape c m c
 evalCellExpr offset = eval
   where
     eval (CellExact n) = pure n

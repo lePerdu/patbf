@@ -68,15 +68,19 @@ insertComments code =
       comment <- genComment
       return (source ++ [instr] ++ comment)
 
--- | String without NUL characters for use as input to Brainfuck programs.
+-- | List without zeros for use as input to Brainfuck programs.
 --
 -- Because NUL is treated as EOF, the input strings cannot contain NUL
 -- TODO Implement different null-handling functions
-newtype NonNullAscii = NonNull String deriving (Show)
+newtype NonNullList c = NonNull [c] deriving (Show)
 
-instance Arbitrary NonNullAscii where
-  arbitrary = NonNull . filter (\c -> isAscii c && isPrint c) <$> arbitrary
+instance (Integral c, Arbitrary c) => Arbitrary (NonNullList c) where
+  arbitrary = NonNull . filter (/= 0) <$> arbitrary
   shrink (NonNull s) = NonNull <$> shrink s
+
+-- | Convert a string into a list of 'c'
+listFromString :: Integral c => String -> [c]
+listFromString = map (fromIntegral . ord)
 
 -- | Type with a phantom type parameter 'c' to indicate cell type
 --

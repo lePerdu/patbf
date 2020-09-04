@@ -1,6 +1,7 @@
 -- | Small brainfuck programs for testing interpreters
 module Programs where
 
+import Data.Char
 import Pinky.Brainfuck
 
 -- | Does nothing
@@ -159,3 +160,6 @@ helloWorldProgram = intoBf $ do
   moveRight
   incrementN 2
   output
+
+helloWorld :: Integral c => [c]
+helloWorld = map (fromIntegral . ord) "Hello World!\n"

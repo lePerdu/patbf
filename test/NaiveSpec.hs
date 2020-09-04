@@ -16,26 +16,27 @@ cellTypeSpec :: forall c. (BfCell c, Arbitrary c) => CellTypeSpec c
 cellTypeSpec = CellTypeSpec $ do
   it "empty program" $
     property $
-      \input -> runBfNaive emptyProgram input === (input, "")
+      \input -> runBfNaive emptyProgram input === (input, [])
 
   it "cat program" $
     property $
-      \(NonNull input) -> runBfNaive catProgram input === ("", input)
+      \(NonNull input) -> runBfNaive catProgram input === ([], input)
 
   it "reverse program" $
     property $
       \(NonNull input) ->
-        runBfNaive reverseProgram input === ("", reverse input)
+        runBfNaive reverseProgram input === ([], reverse input)
 
   it "print0 program" $
     property $
-      \(NonNull input) -> runBfNaive print0Program input === (input, "0")
+      \(NonNull input) -> runBfNaive print0Program input === (input, [48])
 
   it "hello world program" $
     property $
       \(NonNull input) ->
-        runBfNaive helloWorldProgram input === (input, "Hello World!\n")
+        runBfNaive helloWorldProgram input === (input, helloWorld)
   where
+    runBfNaive :: Bf -> [c] -> ([c], [c])
     runBfNaive code input =
       execBufferMachine (interpretBasic code :: BufferMachine c ()) input
 

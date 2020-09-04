@@ -1,5 +1,5 @@
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | High-level wrappers functions for common use cases.
@@ -10,13 +10,12 @@ module Pinky
     bfOptLevel,
     runBfParser,
     interpretBf,
-    runBf,
   )
 where
 
+import Data.Either.Combinators
 import Data.Text (Text, pack)
 import Data.Word
-import Data.Either.Combinators
 import Lens.Micro.Platform
 import Pinky.Brainfuck.Language
 import Pinky.Brainfuck.Machine
@@ -54,8 +53,7 @@ runBfParser source text = mapLeft show $ runParser parseBf source text
 --
 -- This is simply a dispatcher for various interpreters.
 interpretBf ::
-  forall m c.
-  (BrainfuckMachine m, BfOptCell c, MachineCell m ~ c) =>
+  (BfOptCell c, BrainfuckMachine m c) =>
   -- | Options for interpreting the Brainfuck code
   BfOptions ->
   -- | Code to interpret
@@ -65,12 +63,3 @@ interpretBf ::
 interpretBf options = case _bfOptLevel options of
   NoOptimize -> interpretBasic
   FullOptimize -> interpretOptimized
-
--- | Runs un-optimized Brainfuck in IO.
---
--- Useful for debugging.
-runBf :: String -> IO ()
-runBf source = do
-    runIOMachine (interpretBasic code :: IOMachine Word8 ())
-  where
-    Right code = runBfParser "" (pack source)

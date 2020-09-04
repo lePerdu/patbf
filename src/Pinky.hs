@@ -47,7 +47,8 @@ runBfParser ::
   Text ->
   -- | Parsed code or an error message
   Either String Bf
-runBfParser source text = mapLeft show $ runParser parseBf source text
+runBfParser source text =
+  mapLeft errorBundlePretty $ runParser parseBf source text
 
 -- | Convert brainfuck code into a BrainfuckMachine action.
 --

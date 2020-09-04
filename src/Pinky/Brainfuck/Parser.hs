@@ -23,10 +23,15 @@ command =
       [Increment, Decrement, MoveLeft, MoveRight, Input, Output, Debug]
 
 loop :: Parser BfInstr
-loop = Loop <$> between (char '[') (char ']') instrs
+loop =
+  Loop
+    <$> between
+      (char '[' <?> "'[' (loop start)")
+      (char ']' <?> "']' (loop end)")
+      instrs
 
 comment :: Parser ()
-comment = void $ takeWhileP (Just "comment") (`notElem` "+-<>[].,#")
+comment = void $ takeWhileP Nothing (`notElem` "+-<>[].,#")
 
 instr :: Parser BfInstr
 instr = command <|> loop

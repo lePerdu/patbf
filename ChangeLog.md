@@ -5,6 +5,7 @@
 ### Added
 
 - `fromBf :: Bf -> BrainfuckM ()`
+- Proper error messages (using `errorBundlePretty` and some custom labels)
 
 ### Changed
 

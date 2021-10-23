@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -14,6 +15,8 @@ module Pinky.Brainfuck.Machine
 where
 
 import Control.Monad.State
+import Control.Monad.ST
+import Control.Monad.Primitive
 import Data.Char
 import Data.Maybe (fromMaybe, maybe)
 import Data.Word
@@ -24,8 +27,8 @@ import System.IO
 class (Integral t, Show t) => BfCell t
 
 instance BfCell Word8
-instance BfCell Word
 
+instance BfCell Word
 
 -- | Type class for Brainfuck I/O operations.
 --
@@ -33,7 +36,7 @@ instance BfCell Word
 -- should work for any cell type. Instances are responsable for deciding whether
 -- I/O is byte-oriented or character-oriented in some encoding, and converting
 -- to and from the cell type.
-class (Monad m, BfCell c) => BrainfuckMachine m c | m -> c where
+class (Monad m, BfCell c) => BrainfuckMachine c m | m -> c where
   -- | Output a single cell.
   bfPutChar :: c -> m ()
 
@@ -48,7 +51,7 @@ class (Monad m, BfCell c) => BrainfuckMachine m c | m -> c where
 newtype IOMachine c a = IOMachine {runIOMachine :: IO a}
   deriving (Functor, Applicative, Monad)
 
-instance BfCell c => BrainfuckMachine (IOMachine c) c where
+instance BfCell c => BrainfuckMachine c (IOMachine c) where
   bfPutChar = IOMachine . putChar . chr . fromIntegral
   bfGetChar = IOMachine $ do
     eof <- isEOF
@@ -63,7 +66,7 @@ newtype BufferMachine c a = BufferMachine
   {_unBufferMachine :: State ([c], [c]) a}
   deriving (Functor, Applicative, Monad)
 
-instance BfCell c => BrainfuckMachine (BufferMachine c) c where
+instance BfCell c => BrainfuckMachine c (BufferMachine c) where
   bfPutChar val = BufferMachine $ modifying _2 (++ [val])
   bfGetChar = BufferMachine $ do
     input <- use _1
@@ -71,7 +74,7 @@ instance BfCell c => BrainfuckMachine (BufferMachine c) c where
       c : rest -> do
         _1 .= rest
         return $ Just c
-      [] -> return $ Nothing
+      [] -> return Nothing
 
 -- Runs a BufferMachine with given input, returning computed value, unread
 -- input, and the output

@@ -4,12 +4,12 @@
 module Main where
 
 import Commands
-import Control.Exception (Exception (..))
+import Control.Exception
 import Control.Monad
+import Control.Monad.Catch (MonadMask)
 import Control.Monad.Reader
 import Control.Monad.State.Strict
 import Data.Either.Combinators
-import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Word
@@ -18,10 +18,7 @@ import Options.Applicative
 import Pinky
 import Pinky.Brainfuck
 import System.Console.Haskeline
-import System.Environment
-import System.Exit
 import System.IO
-import System.IO.Error
 import Text.Megaparsec (runParser)
 import Types
 
@@ -136,10 +133,10 @@ runFile path = liftIO (TIO.readFile path) >>= runCode path
 runStdInput :: (MonadReader RunOptions m, MonadIO m) => m ()
 runStdInput = liftIO TIO.getContents >>= runCode "stdin"
 
-runRepl :: (MonadReader RunOptions m, MonadIO m, MonadException m) => m ()
+runRepl :: (MonadReader RunOptions m, MonadIO m, MonadMask m) => m ()
 runRepl = computeInitState >>= evalStateT (runInputT defaultSettings loop)
   where
-    computeInitState = ReplState <$> pure "% " <*> ask
+    computeInitState = asks $ ReplState "% "
 
     runReplCommand (SetPrompt p) = replPrompt .= p
     runReplCommand (SetUnbuffered b) = replRunOpts . unbufferedInput .= b

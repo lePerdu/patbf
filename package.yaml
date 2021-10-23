@@ -25,11 +25,14 @@ dependencies:
 - array
 - containers
 - either
+- exceptions
 - megaparsec
 - microlens-platform
 - mtl
 - primitive
+- STMonadTrans
 - text
+- vector
 
 library:
   source-dirs: src
@@ -44,6 +47,8 @@ library:
   - Pinky.Brainfuck.Optimizer.Internal
   - Pinky.Brainfuck.Parser
   - Pinky.Brainfuck.Tape
+  - Pinky.Brainfuck.Tape.List
+  - Pinky.Brainfuck.Tape.Vector
 
 executables:
   pinkybf:

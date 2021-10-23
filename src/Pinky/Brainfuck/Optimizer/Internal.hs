@@ -4,8 +4,8 @@
 module Pinky.Brainfuck.Optimizer.Internal where
 
 import Control.Applicative
-import Data.Foldable
 import Control.Monad.State
+import Data.Foldable
 -- TODO Use strict version?
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
@@ -160,8 +160,10 @@ cellExprShift shift = doShift
   where
     doShift (CellExact v) = CellExact v
     doShift (CellRef ref) = CellRef (ref + shift)
-    doShift (CellAdd x y) = cellAdd (doShift x) (doShift y)
-    doShift (CellMul x y) = cellMul (doShift x) (doShift y)
+    -- Only changes references, not any celltypes, so the normal constructors
+    -- can be used instead of the wrapper functions (`cellAdd` and `cellMul`)
+    doShift (CellAdd x y) = CellAdd (doShift x) (doShift y)
+    doShift (CellMul x y) = CellMul (doShift x) (doShift y)
 
 resolveCellRefs ::
   Integral c => Int -> IntMap (CellExpr c) -> CellExpr c -> CellExpr c
@@ -215,8 +217,7 @@ cellApplyShifted ::
   (CellExpr c -> CellExpr c) ->
   CellExpr c ->
   CellExpr c
-cellApplyShifted shift f expr =
-  cellExprShift (- shift) $ f $ cellExprShift shift expr
+cellApplyShifted shift f = cellExprShift (- shift) . f . cellExprShift shift
 
 mapEffects ::
   Integral c => (CellExpr c -> CellExpr c) -> TapeEffect c -> TapeEffect c
@@ -249,38 +250,42 @@ tapeEffIsEmpty :: Integral c => TapeEffect c -> Bool
 tapeEffIsEmpty (TapeEffect exprs offset) =
   offset == 0 && all cellExprIsEmpty exprs
 
+canCollapseLoop :: Integral c => TapeEffect c -> Bool
+canCollapseLoop (TapeEffect exprs endOffset) =
+  endOffset == 0 && IntMap.lookup 0 exprs == Just cellExprDecr
+
 -- | Attempt to reduce a loop with a TapeEffect into another TapeEffect.
 tapeEffLoop :: Integral c => TapeEffect c -> Maybe (TapeEffect c)
-tapeEffLoop (TapeEffect exprs endOffset)
-  | endOffset /= 0 = Nothing
-  | IntMap.lookup 0 exprs == Just (cellAdd (CellExact (-1)) (CellRef 0)) = do
-    repeated <-
-      IntMap.traverseWithKey
-        (\offset -> cellExprRepeat (- offset))
-        exprs
-    return $ TapeEffect repeated endOffset <> tapeEffZeroHead
-  | otherwise = Nothing
+tapeEffLoop effect@(TapeEffect exprs _) =
+  if canCollapseLoop effect
+    then do
+      repeated <-
+        IntMap.traverseWithKey
+          (\offset -> cellExprRepeat (- offset))
+          exprs
+      return $ TapeEffect repeated 0 <> tapeEffZeroHead
+    else Nothing
 
 -- | Runs a series of effects on a Brainfuck tape
 --
 -- Note that the effects are run in reverse order since that is how they are
 -- built.
 runBfEffects ::
-  (BfCell c, BrainfuckMachine m c) =>
+  (BfCell c, BrainfuckMachine c m, MonadBfTape c m) =>
   [BfEffect c] ->
-  BrainfuckTape c m ()
+  m ()
 runBfEffects [] = pure ()
 runBfEffects (eff : rest) = runBfEffects rest >> runBfEffect eff
 
 -- | Runs a single effect on a Brainfuck tape
 runBfEffect ::
-  (BfCell c, BrainfuckMachine m c) => BfEffect c -> BrainfuckTape c m ()
+  (BfCell c, BrainfuckMachine c m, MonadBfTape c m) => BfEffect c -> m ()
 runBfEffect (TapeEff eff) = runTapeEffect eff
 runBfEffect InputEff = do
-  input <- lift bfGetChar
+  input <- bfGetChar
   -- TODO Abstract out EOF handling
-  setCell (fromMaybe 0 input)
-runBfEffect OutputEff = readCell >>= lift . bfPutChar
+  writeCell (fromMaybe 0 input)
+runBfEffect OutputEff = readCell >>= bfPutChar
 runBfEffect (LoopEff loopCode) = runLoop
   where
     runLoop = do
@@ -289,18 +294,18 @@ runBfEffect (LoopEff loopCode) = runLoop
 
 -- | Runs a "pure" tape effect on a Brainfuck tape
 runTapeEffect ::
-  (BfCell c, BrainfuckMachine m c) => TapeEffect c -> BrainfuckTape c m ()
+  (BfCell c, BrainfuckMachine c m, MonadBfTape c m) => TapeEffect c -> m ()
 runTapeEffect (TapeEffect exprs offset) = do
   -- Evaluate the cells first since they should not be inter-dependantly
   -- calculated
   newCellVals <- IntMap.traverseWithKey evalCellExpr exprs
   -- liftIO (print (TapeEffect exprs offset))
-  IntMap.traverseWithKey setCellOffset newCellVals
+  IntMap.traverseWithKey writeCellOffset newCellVals
   moveHead offset
 
 -- | Use tape state to evaluate a CellExpr
 evalCellExpr ::
-  (BfCell c, BrainfuckMachine m c) => Int -> CellExpr c -> BrainfuckTape c m c
+  (BfCell c, BrainfuckMachine c m, MonadBfTape c m) => Int -> CellExpr c -> m c
 evalCellExpr offset = eval
   where
     eval (CellExact n) = pure n

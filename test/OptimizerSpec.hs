@@ -7,6 +7,7 @@ import Pinky.Brainfuck
 import Pinky.Brainfuck.Naive
 import Pinky.Brainfuck.Optimizer.Internal
 import Pinky.Brainfuck.Tape
+import Pinky.Brainfuck.Tape.List
 import Programs
 import Test.Hspec
 import Test.Invariant
@@ -41,14 +42,14 @@ getTapeBounds (Bf code) =
   (length (filter (== MoveLeft) code), length (filter (== MoveRight) code))
 
 runBoundedTape ::
-  BfCell c => Bf -> BrainfuckTape c (BufferMachine c) a -> BfState c
+  (BfCell c) => Bf -> BfListTape c (BufferMachine c) a -> BfTapeState c
 runBoundedTape bf action =
   let (lBound, rBound) = getTapeBounds bf
-      machine = runBfTape (moveHead lBound >> action)
-      ((_, tape), _) = runBufferMachine machine []
+      machine = snd <$> runBfListTape (moveHead lBound >> action)
+      (tape, _) = runBufferMachine machine []
    in truncateTape rBound tape
 
-runOptBounded :: BfOptCell c => Bf -> BfState c
+runOptBounded :: BfOptCell c => Bf -> BfTapeState c
 runOptBounded bf =
   runBoundedTape bf $ runBfEffects $ runBfOptState $ parseRaw bf
 
@@ -84,7 +85,7 @@ cellTypeSpec = CellTypeSpec $ do
         \(PureBf bf) ->
           let optTape = runOptBounded bf
               naiveTape = runBoundedTape bf $ interpretBasicTape bf
-           in (optTape :: BfState c) === naiveTape
+           in (optTape :: BfTapeState c) === naiveTape
 
     it "loop performs multiplication" $
       property $

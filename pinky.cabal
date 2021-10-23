@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 
@@ -37,20 +37,26 @@ library
       Pinky.Brainfuck.Optimizer.Internal
       Pinky.Brainfuck.Parser
       Pinky.Brainfuck.Tape
+      Pinky.Brainfuck.Tape.List
+      Pinky.Brainfuck.Tape.Vector
   other-modules:
+      Programs
       Paths_pinky
   hs-source-dirs:
       src
   build-depends:
-      array
+      STMonadTrans
+    , array
     , base >=4.7 && <5
     , containers
     , either
+    , exceptions
     , megaparsec
     , microlens-platform
     , mtl
     , primitive
     , text
+    , vector
   default-language: Haskell2010
 
 executable pinkybf
@@ -63,10 +69,12 @@ executable pinkybf
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      array
+      STMonadTrans
+    , array
     , base >=4.7 && <5
     , containers
     , either
+    , exceptions
     , haskeline
     , megaparsec
     , microlens-platform
@@ -75,6 +83,7 @@ executable pinkybf
     , pinky
     , primitive
     , text
+    , vector
   default-language: Haskell2010
 
 test-suite pinky-test
@@ -93,10 +102,12 @@ test-suite pinky-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
+    , STMonadTrans
     , array
     , base >=4.7 && <5
     , containers
     , either
+    , exceptions
     , hspec
     , megaparsec
     , microlens-platform
@@ -105,4 +116,5 @@ test-suite pinky-test
     , primitive
     , test-invariant
     , text
+    , vector
   default-language: Haskell2010

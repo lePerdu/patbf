@@ -54,7 +54,7 @@ runBfParser source text =
 --
 -- This is simply a dispatcher for various interpreters.
 interpretBf ::
-  (BfOptCell c, BrainfuckMachine m c) =>
+  (BfOptCell c, BrainfuckMachine c m) =>
   -- | Options for interpreting the Brainfuck code
   BfOptions ->
   -- | Code to interpret

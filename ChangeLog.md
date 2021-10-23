@@ -9,7 +9,12 @@
 
 ### Changed
 
-- Rename `trimTape` -> `truncateTape` and move into `BrainfuckTape` module
+- Replace `BrainfuckTape` with `MonadBfTape` to allow multiple implementations.
+  - `Pinky.Brainfuck.Tape.List` is the original, naive list-based
+    implementation.
+  - `Pinky.Brainfuck.Tape.Vector` is a more performant, array-based
+    implementation.
+- Rename `trimTape` -> `truncateTape` and move into `Brainfuck.Tape` module
 - Convert `BrainfuckMachine` to use functional dependencies instead of type
   families. This makes type declarations using it more straight-forward and
   avoids having to add `{-# LANGUAGE TypeFamilies #-}` everywhere it's used.

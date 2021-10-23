@@ -4,14 +4,16 @@ module TapeSpec where
 
 import Control.Monad.Identity
 import Data.Word
+import Pinky.Brainfuck.Machine
 import Pinky.Brainfuck.Tape
+import Pinky.Brainfuck.Tape.List
 import Test.Hspec
 import Test.QuickCheck
 import Utils
 
 -- runBfTape in the Identity monad
-runBfTapeId :: BfCell c => BrainfuckTape c Identity a -> a
-runBfTapeId = runIdentity . evalBfTape
+runBfTapeId :: BfCell c => BfListTape c Identity a -> a
+runBfTapeId = runIdentity . evalBfListTape
 
 -- | Helper for running all tests with multiple cell types
 --
@@ -21,7 +23,7 @@ cellTypeSpec = CellTypeSpec $ do
   describe "read reflects write" $ do
     it "reads value after write at initial location" $
       property $
-        \value -> (value :: c) == runBfTapeId (setCell value >> readCell)
+        \value -> (value :: c) == runBfTapeId (writeCell value >> readCell)
 
     it "reads value after move and move back" $
       property $
@@ -29,7 +31,7 @@ cellTypeSpec = CellTypeSpec $ do
           (value :: c)
             == runBfTapeId
               ( do
-                  setCell value
+                  writeCell value
                   moveHead shift
                   moveHead (- shift)
                   readCell
@@ -41,7 +43,7 @@ cellTypeSpec = CellTypeSpec $ do
           (value :: c)
             == runBfTapeId
               ( do
-                  setCellOffset shift value
+                  writeCellOffset shift value
                   moveHead shift
                   readCell
               )
@@ -52,7 +54,7 @@ cellTypeSpec = CellTypeSpec $ do
           (value :: c)
             == runBfTapeId
               ( do
-                  setCellOffset shift value
+                  writeCellOffset shift value
                   readCellOffset shift
               )
 
@@ -65,7 +67,7 @@ cellTypeSpec = CellTypeSpec $ do
             ==> (0 :: c)
               == runBfTapeId
                 ( do
-                    setCellOffset writePos value
+                    writeCellOffset writePos value
                     readCellOffset readPos
                 )
 

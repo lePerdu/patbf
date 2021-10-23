@@ -1,21 +1,24 @@
+{-# LANGUAGE PartialTypeSignatures #-}
+
 module Pinky.Brainfuck.Naive
   ( interpretBasic,
     interpretBasicTape,
   )
 where
 
-import Data.Maybe (fromMaybe)
 import Control.Monad (unless)
-import Data.Foldable (traverse_)
 import Control.Monad.Trans
+import Data.Foldable (traverse_)
+import Data.Maybe (fromMaybe)
 import Pinky.Brainfuck.Language
 import Pinky.Brainfuck.Machine
 import Pinky.Brainfuck.Tape
+import Pinky.Brainfuck.Tape.List
 
 -- This is needed because lifting interpretBasic causes the program to
 -- never halt
 interpretBasicTape ::
-  (BfCell c, BrainfuckMachine m c) => Bf -> BrainfuckTape c m ()
+  (BfCell c, BrainfuckMachine c m) => Bf -> BfListTape c m ()
 interpretBasicTape = traverse_ interpInstr . _bfCode
   where
     interpInstr Increment = modifyCell (+ 1)
@@ -25,7 +28,7 @@ interpretBasicTape = traverse_ interpInstr . _bfCode
     interpInstr Input = do
       char <- lift bfGetChar
       -- TODO Abstract out EOF handling
-      setCell (fromMaybe 0 char)
+      writeCell (fromMaybe 0 char)
     interpInstr Output = readCell >>= (lift . bfPutChar)
     interpInstr Debug = pure () -- TODO
     interpInstr (Loop code) = interpLoop
@@ -34,5 +37,5 @@ interpretBasicTape = traverse_ interpInstr . _bfCode
           cell <- readCell
           unless (cell == 0) (interpretBasicTape code >> interpLoop)
 
-interpretBasic :: (BfCell c, BrainfuckMachine m c) => Bf -> m ()
-interpretBasic = evalBfTape . interpretBasicTape
+interpretBasic :: (BfCell c, BrainfuckMachine c m) => Bf -> m ()
+interpretBasic = evalBfListTape . interpretBasicTape

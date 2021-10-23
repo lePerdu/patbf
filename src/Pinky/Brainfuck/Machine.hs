@@ -16,7 +16,6 @@ where
 
 import Control.Monad.State
 import Control.Monad.ST
-import Control.Monad.Primitive
 import Data.Char
 import Data.Maybe (fromMaybe, maybe)
 import Data.Word

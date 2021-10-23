@@ -1,8 +1,0 @@
-cradle:
-  stack:
-  - path: "src"
-    component: "pinky:lib"
-  - path: "app"
-    component: "pinky:exe:pinkybf"
-  - path: "test"
-    component: "pinky:test:pinky-test"

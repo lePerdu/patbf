@@ -29,10 +29,8 @@ dependencies:
 - megaparsec
 - microlens-platform
 - mtl
-- primitive
 - STMonadTrans
 - text
-- vector
 
 library:
   source-dirs: src
